@@ -3,20 +3,31 @@
 import { useState } from 'react';
 import { useAuth } from '@/components/AuthProvider';
 import { addVisitLog } from '@/lib/firestore';
-import type { VisitMethod } from '@/lib/types';
+import type { VisitMethod, Contact } from '@/lib/types';
 
 const METHODS: VisitMethod[] = ['訪問', '電話', 'メール', 'FAX', 'オンライン', 'その他'];
+
+const TEMPLATES = [
+  '定期連絡。サービス利用状況を確認。特に変化なし。',
+  '新規利用者の紹介依頼。資料を提供し検討いただく。',
+  '担当ケアマネより連絡あり。利用者の状態変化を共有。',
+  'サービス内容について説明。契約に向け検討中。',
+  '請求・加算内容について確認。疑問点を解消。',
+  'モニタリング訪問。短期目標の達成状況を確認。',
+];
 
 interface Props {
   jigyoshoId: string;
   jigyoshoName: string;
+  contacts?: Contact[];
   onAdded: () => void;
 }
 
-export function VisitLogForm({ jigyoshoId, jigyoshoName, onAdded }: Props) {
+export function VisitLogForm({ jigyoshoId, jigyoshoName, contacts = [], onAdded }: Props) {
   const { user } = useAuth();
   const [open, setOpen] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [showTemplates, setShowTemplates] = useState(false);
   const today = new Date().toISOString().split('T')[0];
 
   const [form, setForm] = useState({
@@ -51,6 +62,11 @@ export function VisitLogForm({ jigyoshoId, jigyoshoName, onAdded }: Props) {
     } finally {
       setSaving(false);
     }
+  };
+
+  const applyTemplate = (t: string) => {
+    setForm((f) => ({ ...f, content: f.content ? f.content + '\n' + t : t }));
+    setShowTemplates(false);
   };
 
   if (!open) {
@@ -102,18 +118,68 @@ export function VisitLogForm({ jigyoshoId, jigyoshoName, onAdded }: Props) {
       </div>
 
       <div>
-        <label className="text-xs text-gray-500 mb-1 block">対応者名</label>
-        <input
-          type="text"
-          value={form.contact}
-          onChange={(e) => setForm({ ...form, contact: e.target.value })}
-          placeholder="例：田中部長"
-          className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
-        />
+        <label className="text-xs text-gray-500 mb-1 block">対応者</label>
+        {contacts.length > 0 ? (
+          <select
+            value={form.contact}
+            onChange={(e) => setForm({ ...form, contact: e.target.value })}
+            className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
+          >
+            <option value="">（選択してください）</option>
+            {contacts.map((c) => (
+              <option key={c.id} value={c.name}>
+                {c.name}{c.title ? `（${c.title}）` : ''}
+              </option>
+            ))}
+            <option value="__other__">その他（直接入力）</option>
+          </select>
+        ) : (
+          <input
+            type="text"
+            value={form.contact}
+            onChange={(e) => setForm({ ...form, contact: e.target.value })}
+            placeholder="例：田中部長"
+            className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
+          />
+        )}
+        {contacts.length > 0 && form.contact === '__other__' && (
+          <input
+            type="text"
+            placeholder="名前を入力"
+            onChange={(e) => setForm({ ...form, contact: e.target.value })}
+            className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm mt-1 focus:outline-none focus:ring-2 focus:ring-blue-400"
+          />
+        )}
       </div>
 
       <div>
-        <label className="text-xs text-gray-500 mb-1 block">内容 <span className="text-red-500">*</span></label>
+        <div className="flex items-center justify-between mb-1">
+          <label className="text-xs text-gray-500">内容 <span className="text-red-500">*</span></label>
+          <button
+            type="button"
+            onClick={() => setShowTemplates((v) => !v)}
+            className="text-xs text-blue-500 hover:text-blue-700 flex items-center gap-1"
+          >
+            <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+            </svg>
+            定型文
+          </button>
+        </div>
+        {showTemplates && (
+          <div className="mb-2 bg-gray-50 rounded-lg border border-gray-100 divide-y divide-gray-100">
+            {TEMPLATES.map((t, i) => (
+              <button
+                key={i}
+                type="button"
+                onClick={() => applyTemplate(t)}
+                className="w-full text-left text-xs text-gray-600 px-3 py-2 hover:bg-blue-50 hover:text-blue-700 transition first:rounded-t-lg last:rounded-b-lg"
+              >
+                {t}
+              </button>
+            ))}
+          </div>
+        )}
         <textarea
           value={form.content}
           onChange={(e) => setForm({ ...form, content: e.target.value })}

@@ -252,6 +252,7 @@ export default function JigyoshoDetailPage({ params }: { params: Promise<{ id: s
               <VisitLogForm
                 jigyoshoId={jigyoshoKey}
                 jigyoshoName={jigyosho.名称}
+                contacts={contacts}
                 onAdded={() => loadData(jigyoshoKey)}
               />
               <VisitLogList
