@@ -26,6 +26,8 @@ import type {
   DocumentCategory,
   JigyoshoStatus,
   RelationStatus,
+  MonitoringRecord,
+  GoalAssessment,
 } from './types';
 
 // ── Notes ──────────────────────────────────────────────
@@ -139,6 +141,55 @@ export async function addVisitLog(
 
 export async function deleteVisitLog(id: string): Promise<void> {
   await deleteDoc(doc(getDb(), VISITS_COLLECTION, id));
+}
+
+// ── Monitoring Records ──────────────────────────────────
+const MONITORING_COLLECTION = 'monitoring_records';
+
+function docToMonitoring(id: string, data: Record<string, unknown>): MonitoringRecord {
+  return {
+    id,
+    jigyoshoId: data.jigyoshoId as string,
+    jigyoshoName: data.jigyoshoName as string,
+    carePlanDocumentId: data.carePlanDocumentId as string,
+    carePlanDocumentTitle: data.carePlanDocumentTitle as string,
+    date: data.date as string,
+    method: data.method as MonitoringRecord['method'],
+    voiceTranscript: (data.voiceTranscript as string) || '',
+    goalAssessments: (data.goalAssessments as GoalAssessment[]) || [],
+    overallAssessment: (data.overallAssessment as string) || '',
+    nextAction: data.nextAction as string | undefined,
+    nextDate: data.nextDate as string | undefined,
+    createdBy: data.createdBy as string,
+    createdByName: data.createdByName as string,
+    createdAt: (data.createdAt as Timestamp)?.toDate() || new Date(),
+    updatedAt: (data.updatedAt as Timestamp)?.toDate() || new Date(),
+  };
+}
+
+export async function getMonitoringRecords(jigyoshoId: string): Promise<MonitoringRecord[]> {
+  const q = query(
+    collection(getDb(), MONITORING_COLLECTION),
+    where('jigyoshoId', '==', jigyoshoId),
+    orderBy('date', 'desc')
+  );
+  const snap = await getDocs(q);
+  return snap.docs.map((d) => docToMonitoring(d.id, d.data()));
+}
+
+export async function addMonitoringRecord(
+  record: Omit<MonitoringRecord, 'id' | 'createdAt' | 'updatedAt'>
+): Promise<string> {
+  const ref = await addDoc(collection(getDb(), MONITORING_COLLECTION), {
+    ...record,
+    createdAt: serverTimestamp(),
+    updatedAt: serverTimestamp(),
+  });
+  return ref.id;
+}
+
+export async function deleteMonitoringRecord(id: string): Promise<void> {
+  await deleteDoc(doc(getDb(), MONITORING_COLLECTION, id));
 }
 
 // ── Contacts ────────────────────────────────────────────

@@ -40,5 +40,11 @@ service cloud.firestore {
       allow read: if isAuthed();
       allow write: if isAuthed();
     }
+
+    match /monitoring_records/{recordId} {
+      allow read: if isAuthed();
+      allow create: if isAuthed() && request.resource.data.createdBy == request.auth.uid;
+      allow delete: if isAuthed() && isOwner(resource);
+    }
   }
 }

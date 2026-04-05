@@ -13,16 +13,19 @@ import { VisitLogList } from '@/components/VisitLogList';
 import { DocumentManager } from '@/components/DocumentManager';
 import { JigyoshoStatusPanel } from '@/components/JigyoshoStatusPanel';
 import { OcrModal } from '@/components/OcrModal';
+import { MonitoringForm } from '@/components/MonitoringForm';
+import { MonitoringList } from '@/components/MonitoringList';
 import { fetchJigyoshoList, buildAddress, googleMapsEmbedUrl } from '@/lib/master-api';
-import { getNotes, getVisitLogs, getContacts, getDocuments, getJigyoshoStatus } from '@/lib/firestore';
-import type { Jigyosho, JigyoshoNote, VisitLog, Contact, JigyoshoDocument, JigyoshoStatus } from '@/lib/types';
+import { getNotes, getVisitLogs, getContacts, getDocuments, getJigyoshoStatus, getMonitoringRecords } from '@/lib/firestore';
+import type { Jigyosho, JigyoshoNote, VisitLog, Contact, JigyoshoDocument, JigyoshoStatus, MonitoringRecord } from '@/lib/types';
 
-type TabKey = 'crm' | 'notes' | 'docs';
+type TabKey = 'crm' | 'monitoring' | 'docs' | 'notes';
 
 const TABS: { key: TabKey; label: string }[] = [
   { key: 'crm', label: '営業・担当者' },
+  { key: 'monitoring', label: 'モニタリング' },
   { key: 'docs', label: '書類' },
-  { key: 'notes', label: 'メモ・資料' },
+  { key: 'notes', label: 'メモ' },
 ];
 
 export default function JigyoshoDetailPage({ params }: { params: Promise<{ id: string }> }) {
@@ -36,6 +39,7 @@ export default function JigyoshoDetailPage({ params }: { params: Promise<{ id: s
   const [visitLogs, setVisitLogs] = useState<VisitLog[]>([]);
   const [contacts, setContacts] = useState<Contact[]>([]);
   const [documents, setDocuments] = useState<JigyoshoDocument[]>([]);
+  const [monitoringRecords, setMonitoringRecords] = useState<MonitoringRecord[]>([]);
   const [status, setStatus] = useState<JigyoshoStatus | null>(null);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<TabKey>('crm');
@@ -44,18 +48,20 @@ export default function JigyoshoDetailPage({ params }: { params: Promise<{ id: s
   const jigyoshoKey = jigyosho?.統合事業所ID || jigyosho?.id || decodedId;
 
   const loadData = useCallback(async (key: string) => {
-    const [n, v, c, d, s] = await Promise.all([
+    const [n, v, c, d, s, m] = await Promise.all([
       getNotes(key),
       getVisitLogs(key),
       getContacts(key),
       getDocuments(key),
       getJigyoshoStatus(key),
+      getMonitoringRecords(key),
     ]);
     setNotes(n);
     setVisitLogs(v);
     setContacts(c);
     setDocuments(d);
     setStatus(s);
+    setMonitoringRecords(m);
   }, []);
 
   useEffect(() => {
@@ -254,6 +260,23 @@ export default function JigyoshoDetailPage({ params }: { params: Promise<{ id: s
                 currentUserId={user?.uid}
               />
             </div>
+          </div>
+        )}
+
+        {activeTab === 'monitoring' && (
+          <div className="space-y-3">
+            <h2 className="font-bold text-sm text-gray-700">モニタリング記録</h2>
+            <MonitoringForm
+              jigyoshoId={jigyoshoKey}
+              jigyoshoName={jigyosho.名称}
+              carePlanDocuments={documents.filter((d) => d.category === '居宅サービス計画書')}
+              onAdded={() => loadData(jigyoshoKey)}
+            />
+            <MonitoringList
+              records={monitoringRecords}
+              onDeleted={() => loadData(jigyoshoKey)}
+              currentUserId={user?.uid}
+            />
           </div>
         )}
 

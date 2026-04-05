@@ -7,9 +7,10 @@ import { ref, uploadBytesResumable, getDownloadURL } from 'firebase/storage';
 import { getFirebaseStorage } from '@/lib/firebase';
 import type { JigyoshoDocument, DocumentCategory } from '@/lib/types';
 
-const CATEGORIES: DocumentCategory[] = ['加算シート', '契約書', 'パンフレット', '報告書', 'その他'];
+const CATEGORIES: DocumentCategory[] = ['居宅サービス計画書', '加算シート', '契約書', 'パンフレット', '報告書', 'その他'];
 
 const CATEGORY_COLORS: Record<DocumentCategory, string> = {
+  '居宅サービス計画書': 'bg-blue-100 text-blue-700',
   '加算シート': 'bg-purple-100 text-purple-700',
   '契約書': 'bg-blue-100 text-blue-700',
   'パンフレット': 'bg-green-100 text-green-700',
@@ -36,7 +37,7 @@ export function DocumentManager({ jigyoshoId, documents, onChanged }: Props) {
   const [uploading, setUploading] = useState(false);
   const [progress, setProgress] = useState(0);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
-  const [category, setCategory] = useState<DocumentCategory>('加算シート');
+  const [category, setCategory] = useState<DocumentCategory>('居宅サービス計画書');
   const [title, setTitle] = useState('');
   const [memo, setMemo] = useState('');
 

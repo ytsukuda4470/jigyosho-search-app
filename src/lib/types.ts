@@ -114,7 +114,7 @@ export interface Contact {
 /**
  * Firestore: 書類（加算シート・契約書等）
  */
-export type DocumentCategory = '加算シート' | '契約書' | 'パンフレット' | '報告書' | 'その他';
+export type DocumentCategory = '居宅サービス計画書' | '加算シート' | '契約書' | 'パンフレット' | '報告書' | 'その他';
 
 export interface JigyoshoDocument {
   id: string;
@@ -146,6 +146,44 @@ export interface JigyoshoStatus {
   starred: boolean;
   assignedTo?: string;      // 担当者UID
   updatedBy: string;
+  updatedAt: Date;
+}
+
+/**
+ * Firestore: モニタリング記録
+ */
+export type GoalResult = '達成' | '継続中' | '一部達成' | '未達成' | '変更必要';
+
+export interface ShortTermGoal {
+  goalText: string;       // 短期目標のテキスト
+  period: string;         // 期間（例: R7年7月〜R8年6月）
+  needs?: string;         // 関連するニーズ（第2表の課題）
+}
+
+export interface GoalAssessment {
+  goalText: string;
+  period: string;
+  result: GoalResult;
+  aiReason: string;       // AIの判定根拠
+  comment: string;        // ケアマネのコメント（手動入力）
+}
+
+export interface MonitoringRecord {
+  id: string;
+  jigyoshoId: string;
+  jigyoshoName: string;
+  carePlanDocumentId: string;     // 使用した計画書のドキュメントID
+  carePlanDocumentTitle: string;  // 計画書のタイトル（表示用）
+  date: string;                   // YYYY-MM-DD
+  method: '訪問' | '電話' | 'オンライン';
+  voiceTranscript: string;        // 音声の文字起こし
+  goalAssessments: GoalAssessment[];
+  overallAssessment: string;      // 総合所見
+  nextAction?: string;
+  nextDate?: string;
+  createdBy: string;
+  createdByName: string;
+  createdAt: Date;
   updatedAt: Date;
 }
 
