@@ -1,7 +1,7 @@
 'use client';
 
 import type { Jigyosho } from '@/lib/types';
-import { googleMapsUrl } from '@/lib/master-api';
+import { googleMapsNavUrl } from '@/lib/master-api';
 
 interface Props {
   jigyosho: Jigyosho;
@@ -20,8 +20,8 @@ export function ActionButtons({ jigyosho: j }: Props) {
       color: 'bg-green-500 hover:bg-green-600',
     },
     {
-      label: 'マップ',
-      href: googleMapsUrl(j),
+      label: 'ナビ',
+      href: googleMapsNavUrl(j),
       icon: (
         <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
@@ -59,8 +59,8 @@ export function ActionButtons({ jigyosho: j }: Props) {
           <a
             key={a.label}
             href={a.href}
-            target={a.label === 'マップ' ? '_blank' : undefined}
-            rel={a.label === 'マップ' ? 'noopener noreferrer' : undefined}
+            target={a.label === 'ナビ' ? '_blank' : undefined}
+            rel={a.label === 'ナビ' ? 'noopener noreferrer' : undefined}
             className={`btn-action flex flex-col items-center justify-center gap-1 rounded-xl text-white py-3 transition ${a.color}`}
           >
             {a.icon}

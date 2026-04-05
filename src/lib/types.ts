@@ -65,6 +65,91 @@ export interface JigyoshoNote {
 }
 
 /**
+ * Firestore: 営業記録（訪問・電話・メール等）
+ */
+export type VisitMethod = '訪問' | '電話' | 'メール' | 'FAX' | 'オンライン' | 'その他';
+
+export interface VisitLog {
+  id: string;
+  jigyoshoId: string;
+  jigyoshoName: string;
+  date: string;            // YYYY-MM-DD
+  method: VisitMethod;
+  contact: string;         // 対応者名
+  content: string;         // 内容
+  nextAction?: string;     // 次回アクション
+  nextDate?: string;       // 次回予定日 YYYY-MM-DD
+  createdBy: string;
+  createdByName: string;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+/**
+ * Firestore: 担当者
+ */
+export type ContactStatus = '在職' | '退職' | '異動';
+
+export interface Contact {
+  id: string;
+  jigyoshoId: string;
+  name: string;
+  nameKana?: string;
+  title: string;           // 役職
+  department?: string;     // 部署
+  tel?: string;
+  mobile?: string;
+  email?: string;
+  status: ContactStatus;
+  statusNote?: string;     // 退職・異動先メモ
+  statusDate?: string;     // 退職・異動日
+  memo?: string;
+  businessCardUrl?: string; // 名刺画像URL（Storage）
+  createdBy: string;
+  createdByName: string;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+/**
+ * Firestore: 書類（加算シート・契約書等）
+ */
+export type DocumentCategory = '加算シート' | '契約書' | 'パンフレット' | '報告書' | 'その他';
+
+export interface JigyoshoDocument {
+  id: string;
+  jigyoshoId: string;
+  category: DocumentCategory;
+  title: string;
+  fileUrl: string;
+  fileName: string;
+  fileMimeType: string;
+  fileSize?: number;
+  memo?: string;
+  createdBy: string;
+  createdByName: string;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+/**
+ * Firestore: 事業所ステータス（関係度・WEBサイト等）
+ */
+export type RelationStatus = '未接触' | '接触済' | '取引中' | '休眠';
+
+export interface JigyoshoStatus {
+  jigyoshoId: string;
+  relationStatus: RelationStatus;
+  websiteUrl?: string;      // Geminiで自動取得 or 手動登録
+  websiteSummary?: string;  // GeminiによるWEBサイト要約
+  websiteUpdatedAt?: Date;
+  starred: boolean;
+  assignedTo?: string;      // 担当者UID
+  updatedBy: string;
+  updatedAt: Date;
+}
+
+/**
  * API レスポンス
  */
 export interface PaginatedResponse<T> {

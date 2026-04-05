@@ -33,9 +33,17 @@ export function buildAddress(j: Jigyosho): string {
 }
 
 /**
- * Googleマップ検索URL
+ * Googleマップ ナビゲーションURL（現在地→目的地）
  */
-export function googleMapsUrl(j: Jigyosho): string {
+export function googleMapsNavUrl(j: Jigyosho): string {
   const address = buildAddress(j);
-  return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(address)}`;
+  return `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(address)}&travelmode=driving`;
+}
+
+/**
+ * Googleマップ 埋め込みURL（iframe用）
+ */
+export function googleMapsEmbedUrl(j: Jigyosho): string {
+  const address = buildAddress(j);
+  return `https://maps.google.com/maps?q=${encodeURIComponent(address)}&output=embed&hl=ja`;
 }

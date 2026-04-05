@@ -7,9 +7,23 @@ import { Header } from '@/components/Header';
 import { ActionButtons } from '@/components/ActionButtons';
 import { NoteForm } from '@/components/NoteForm';
 import { NoteList } from '@/components/NoteList';
-import { fetchJigyoshoList, buildAddress } from '@/lib/master-api';
-import { getNotes } from '@/lib/firestore';
-import type { Jigyosho, JigyoshoNote } from '@/lib/types';
+import { ContactList } from '@/components/ContactList';
+import { VisitLogForm } from '@/components/VisitLogForm';
+import { VisitLogList } from '@/components/VisitLogList';
+import { DocumentManager } from '@/components/DocumentManager';
+import { JigyoshoStatusPanel } from '@/components/JigyoshoStatusPanel';
+import { OcrModal } from '@/components/OcrModal';
+import { fetchJigyoshoList, buildAddress, googleMapsEmbedUrl } from '@/lib/master-api';
+import { getNotes, getVisitLogs, getContacts, getDocuments, getJigyoshoStatus } from '@/lib/firestore';
+import type { Jigyosho, JigyoshoNote, VisitLog, Contact, JigyoshoDocument, JigyoshoStatus } from '@/lib/types';
+
+type TabKey = 'crm' | 'notes' | 'docs';
+
+const TABS: { key: TabKey; label: string }[] = [
+  { key: 'crm', label: '営業・担当者' },
+  { key: 'docs', label: '書類' },
+  { key: 'notes', label: 'メモ・資料' },
+];
 
 export default function JigyoshoDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
@@ -19,13 +33,30 @@ export default function JigyoshoDetailPage({ params }: { params: Promise<{ id: s
 
   const [jigyosho, setJigyosho] = useState<Jigyosho | null>(null);
   const [notes, setNotes] = useState<JigyoshoNote[]>([]);
+  const [visitLogs, setVisitLogs] = useState<VisitLog[]>([]);
+  const [contacts, setContacts] = useState<Contact[]>([]);
+  const [documents, setDocuments] = useState<JigyoshoDocument[]>([]);
+  const [status, setStatus] = useState<JigyoshoStatus | null>(null);
   const [loading, setLoading] = useState(true);
+  const [activeTab, setActiveTab] = useState<TabKey>('crm');
+  const [ocrContactId, setOcrContactId] = useState<string | null>(null);
 
-  const loadNotes = useCallback(async () => {
-    if (!jigyosho) return;
-    const n = await getNotes(jigyosho.統合事業所ID || jigyosho.id);
+  const jigyoshoKey = jigyosho?.統合事業所ID || jigyosho?.id || decodedId;
+
+  const loadData = useCallback(async (key: string) => {
+    const [n, v, c, d, s] = await Promise.all([
+      getNotes(key),
+      getVisitLogs(key),
+      getContacts(key),
+      getDocuments(key),
+      getJigyoshoStatus(key),
+    ]);
     setNotes(n);
-  }, [jigyosho]);
+    setVisitLogs(v);
+    setContacts(c);
+    setDocuments(d);
+    setStatus(s);
+  }, []);
 
   useEffect(() => {
     if (!authLoading && !user) {
@@ -38,18 +69,17 @@ export default function JigyoshoDetailPage({ params }: { params: Promise<{ id: s
       try {
         const res = await fetchJigyoshoList({ limit: 1000 });
         const found = res.data.find((j) => j.id === decodedId);
-        if (found) setJigyosho(found);
+        if (found) {
+          setJigyosho(found);
+          await loadData(found.統合事業所ID || found.id);
+        }
       } catch (err) {
         console.error(err);
       } finally {
         setLoading(false);
       }
     })();
-  }, [user, authLoading, router, decodedId]);
-
-  useEffect(() => {
-    if (jigyosho) loadNotes();
-  }, [jigyosho, loadNotes]);
+  }, [user, authLoading, router, decodedId, loadData]);
 
   if (authLoading || loading) {
     return (
@@ -68,10 +98,7 @@ export default function JigyoshoDetailPage({ params }: { params: Promise<{ id: s
         <Header />
         <div className="flex-1 flex flex-col items-center justify-center gap-4 p-4">
           <p className="text-gray-500">事業所が見つかりません</p>
-          <button
-            onClick={() => router.back()}
-            className="text-[var(--color-primary)] text-sm hover:underline"
-          >
+          <button onClick={() => router.back()} className="text-[var(--color-primary)] text-sm hover:underline">
             戻る
           </button>
         </div>
@@ -80,17 +107,13 @@ export default function JigyoshoDetailPage({ params }: { params: Promise<{ id: s
   }
 
   const address = buildAddress(jigyosho);
-  const noteKey = jigyosho.統合事業所ID || jigyosho.id;
 
   return (
     <>
       <Header />
       <main className="flex-1 max-w-4xl mx-auto w-full px-4 py-4 space-y-4">
         {/* 戻るボタン */}
-        <button
-          onClick={() => router.back()}
-          className="flex items-center gap-1 text-sm text-gray-500 hover:text-gray-700"
-        >
+        <button onClick={() => router.back()} className="flex items-center gap-1 text-sm text-gray-500 hover:text-gray-700">
           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
           </svg>
@@ -115,10 +138,7 @@ export default function JigyoshoDetailPage({ params }: { params: Promise<{ id: s
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
               </svg>
-              <span>
-                {jigyosho['住所_郵便番号'] && `〒${jigyosho['住所_郵便番号']} `}
-                {address}
-              </span>
+              <span>{jigyosho['住所_郵便番号'] && `〒${jigyosho['住所_郵便番号']} `}{address}</span>
             </div>
           )}
 
@@ -164,16 +184,108 @@ export default function JigyoshoDetailPage({ params }: { params: Promise<{ id: s
           )}
         </div>
 
+        {/* 地図 */}
+        {address && (
+          <div className="rounded-xl overflow-hidden border border-gray-100 shadow-sm" style={{ height: 220 }}>
+            <iframe
+              src={googleMapsEmbedUrl(jigyosho)}
+              width="100%"
+              height="100%"
+              style={{ border: 0 }}
+              allowFullScreen
+              loading="lazy"
+              referrerPolicy="no-referrer-when-downgrade"
+            />
+          </div>
+        )}
+
         {/* アクションボタン */}
         <ActionButtons jigyosho={jigyosho} />
 
-        {/* 追加情報セクション */}
-        <div className="space-y-3">
-          <h2 className="font-bold text-sm text-gray-700">追加情報</h2>
-          <NoteForm jigyoshoId={noteKey} onAdded={loadNotes} />
-          <NoteList notes={notes} onDeleted={loadNotes} />
+        {/* ステータスパネル */}
+        <JigyoshoStatusPanel
+          jigyoshoId={jigyoshoKey}
+          jigyoshoName={jigyosho.名称}
+          status={status}
+          onChanged={() => loadData(jigyoshoKey)}
+        />
+
+        {/* タブ */}
+        <div className="border-b border-gray-200">
+          <div className="flex gap-0">
+            {TABS.map((tab) => (
+              <button
+                key={tab.key}
+                onClick={() => setActiveTab(tab.key)}
+                className={`px-4 py-2.5 text-sm font-medium border-b-2 transition ${
+                  activeTab === tab.key
+                    ? 'border-[var(--color-primary)] text-[var(--color-primary)]'
+                    : 'border-transparent text-gray-500 hover:text-gray-700'
+                }`}
+              >
+                {tab.label}
+              </button>
+            ))}
+          </div>
         </div>
+
+        {/* タブコンテンツ */}
+        {activeTab === 'crm' && (
+          <div className="space-y-5">
+            <div className="space-y-3">
+              <h2 className="font-bold text-sm text-gray-700">担当者</h2>
+              <ContactList
+                jigyoshoId={jigyoshoKey}
+                contacts={contacts}
+                onChanged={() => loadData(jigyoshoKey)}
+                onOcrRequest={(contactId) => setOcrContactId(contactId)}
+              />
+            </div>
+            <div className="space-y-3">
+              <h2 className="font-bold text-sm text-gray-700">営業記録</h2>
+              <VisitLogForm
+                jigyoshoId={jigyoshoKey}
+                jigyoshoName={jigyosho.名称}
+                onAdded={() => loadData(jigyoshoKey)}
+              />
+              <VisitLogList
+                logs={visitLogs}
+                onDeleted={() => loadData(jigyoshoKey)}
+                currentUserId={user?.uid}
+              />
+            </div>
+          </div>
+        )}
+
+        {activeTab === 'docs' && (
+          <div className="space-y-3">
+            <h2 className="font-bold text-sm text-gray-700">書類管理</h2>
+            <DocumentManager
+              jigyoshoId={jigyoshoKey}
+              documents={documents}
+              onChanged={() => loadData(jigyoshoKey)}
+            />
+          </div>
+        )}
+
+        {activeTab === 'notes' && (
+          <div className="space-y-3">
+            <h2 className="font-bold text-sm text-gray-700">メモ・資料</h2>
+            <NoteForm jigyoshoId={jigyoshoKey} onAdded={() => loadData(jigyoshoKey)} />
+            <NoteList notes={notes} onDeleted={() => loadData(jigyoshoKey)} />
+          </div>
+        )}
       </main>
+
+      {/* OCRモーダル */}
+      {ocrContactId && (
+        <OcrModal
+          contactId={ocrContactId}
+          jigyoshoId={jigyoshoKey}
+          onClose={() => setOcrContactId(null)}
+          onUpdated={() => { setOcrContactId(null); loadData(jigyoshoKey); }}
+        />
+      )}
     </>
   );
 }

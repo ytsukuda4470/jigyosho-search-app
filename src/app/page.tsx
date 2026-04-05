@@ -23,28 +23,34 @@ export default function HomePage() {
   const [loading, setLoading] = useState(false);
   const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
 
-  const filteredData = search
-    ? data.filter((j) => {
-        const q = search.toLowerCase();
-        return (
-          j.名称.toLowerCase().includes(q) ||
-          (j['名称_ｶﾅ'] || '').toLowerCase().includes(q) ||
-          (j.正式名称 || '').toLowerCase().includes(q) ||
-          (j['住所_市区町村'] || '').includes(q) ||
-          (j['住所_その他'] || '').includes(q) ||
-          (j.TEL || '').includes(q) ||
-          (j.事業所番号 || '').includes(q)
-        );
-      })
-    : data;
+  // 拠点フィルター（クライアント側）：APIは拠点パラメータ非対応のため住所で判定
+  const KYOTEN_KEYWORDS: Record<string, string> = {
+    sapporo: '札幌',
+    iwaki: 'いわき',
+  };
+
+  const filteredData = data.filter((j) => {
+    const city = j['住所_市区町村'] || '';
+    const kyotenMatch = !kyoten || city.includes(KYOTEN_KEYWORDS[kyoten] ?? kyoten);
+    if (!kyotenMatch) return false;
+    if (!search) return true;
+    const q = search.toLowerCase();
+    return (
+      j.名称.toLowerCase().includes(q) ||
+      (j['名称_ｶﾅ'] || '').toLowerCase().includes(q) ||
+      (j.正式名称 || '').toLowerCase().includes(q) ||
+      city.includes(q) ||
+      (j['住所_その他'] || '').includes(q) ||
+      (j.TEL || '').includes(q) ||
+      (j.事業所番号 || '').includes(q)
+    );
+  });
 
   const fetchData = useCallback(async () => {
     setLoading(true);
     try {
-      const res = await fetchJigyoshoList({
-        kyoten: kyoten || undefined,
-        limit: 1000,
-      });
+      // 全件取得してクライアント側でフィルタリング
+      const res = await fetchJigyoshoList({ limit: 3000 });
       setData(res.data);
       setTotal(res.total);
       setVisibleCount(PAGE_SIZE);
@@ -53,7 +59,10 @@ export default function HomePage() {
     } finally {
       setLoading(false);
     }
-  }, [kyoten]);
+  }, []);
+
+  // kyoten変更時はvisibleCountをリセット
+  useEffect(() => { setVisibleCount(PAGE_SIZE); }, [kyoten]);
 
   useEffect(() => {
     if (!authLoading && !user) {
@@ -82,7 +91,7 @@ export default function HomePage() {
           <div className="flex items-center justify-between">
             <KyotenFilter value={kyoten} onChange={setKyoten} />
             <span className="text-xs text-gray-400">
-              {filteredData.length} / {total}件
+              {filteredData.length} / {data.length}件
             </span>
           </div>
         </div>

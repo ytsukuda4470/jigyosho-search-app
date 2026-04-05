@@ -2,15 +2,36 @@
 
 import { useAuth } from '@/components/AuthProvider';
 import { useRouter } from 'next/navigation';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 
 export default function LoginPage() {
   const { user, loading, signIn } = useAuth();
   const router = useRouter();
+  const [error, setError] = useState<string | null>(null);
+  const [signing, setSigning] = useState(false);
 
   useEffect(() => {
     if (!loading && user) router.replace('/');
   }, [user, loading, router]);
+
+  const handleSignIn = async () => {
+    setError(null);
+    setSigning(true);
+    try {
+      await signIn();
+    } catch (e: unknown) {
+      const code = (e as { code?: string }).code ?? '';
+      if (code === 'auth/popup-blocked') {
+        setError('ポップアップがブロックされました。ブラウザのアドレスバー右側でポップアップを許可してください。');
+      } else if (code === 'auth/popup-closed-by-user') {
+        // ユーザーが閉じた場合は無視
+      } else {
+        setError(`ログインエラー: ${code || String(e)}`);
+      }
+    } finally {
+      setSigning(false);
+    }
+  };
 
   if (loading) {
     return (
@@ -27,8 +48,12 @@ export default function LoginPage() {
           <h1 className="text-2xl font-bold text-[var(--color-primary)]">事業所検索</h1>
           <p className="mt-2 text-sm text-gray-500">279統合DB</p>
         </div>
+        {error && (
+          <p className="text-sm text-red-600 bg-red-50 rounded-lg px-4 py-3">{error}</p>
+        )}
         <button
-          onClick={signIn}
+          onClick={handleSignIn}
+          disabled={signing}
           className="btn-action w-full flex items-center justify-center gap-3 px-6 py-3 bg-white border border-gray-300 rounded-lg shadow-sm hover:bg-gray-50 transition text-sm font-medium"
         >
           <svg className="w-5 h-5" viewBox="0 0 24 24">
