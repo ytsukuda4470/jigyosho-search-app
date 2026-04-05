@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useAuth } from '@/components/AuthProvider';
-import { Header } from '@/components/Header';
+import { AppLayout } from '@/components/AppLayout';
 import { getAllVisitLogs, getUpcomingActions, getStarredJigyosho } from '@/lib/firestore';
 import type { VisitLog, JigyoshoStatus } from '@/lib/types';
 
@@ -53,18 +53,16 @@ export default function DashboardPage() {
 
   if (authLoading || loading) {
     return (
-      <>
-        <Header />
+      <AppLayout>
         <div className="flex-1 flex items-center justify-center">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[var(--color-primary)]" />
         </div>
-      </>
+      </AppLayout>
     );
   }
 
   return (
-    <>
-      <Header />
+    <AppLayout>
       <main className="flex-1 max-w-4xl mx-auto w-full px-4 py-4 space-y-5">
         <h1 className="text-lg font-bold text-gray-800">ダッシュボード</h1>
 
@@ -161,6 +159,6 @@ export default function DashboardPage() {
           )}
         </section>
       </main>
-    </>
+    </AppLayout>
   );
 }
